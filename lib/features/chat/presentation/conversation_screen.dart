@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/engine/inference_backend.dart';
+import '../../../core/platform/picker_keep_alive.dart';
 import '../../../core/providers/download_provider.dart';
 import '../../../core/providers/inference_provider.dart';
 import '../../../core/providers/tts_provider.dart';
@@ -174,9 +175,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   Future<void> _pickImage() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
+      final result = await whileKeepingAppAlive(
+        () => FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: false,
+        ),
       );
       final picked = result?.files.single;
       if (picked?.path == null || !mounted) return;
