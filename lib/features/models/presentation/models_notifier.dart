@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/platform/picker_keep_alive.dart';
 import '../../../core/providers/download_provider.dart';
 import '../../../core/providers/inference_provider.dart';
 import '../data/model_catalog.dart';
@@ -226,9 +227,11 @@ class ModelsNotifier extends _$ModelsNotifier {
 
   /// Sideload a model from device storage via file picker.
   Future<void> sideloadModel() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
+    final result = await whileKeepingAppAlive(
+      () => FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      ),
     );
     if (result == null || result.files.isEmpty) return;
 
