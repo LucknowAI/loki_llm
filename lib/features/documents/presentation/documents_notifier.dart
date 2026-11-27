@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:langchain/langchain.dart' hide Document;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/providers/embedding_provider.dart';
+import '../../../core/platform/picker_keep_alive.dart';
 import '../../../core/services/text_extraction_service.dart';
 import '../../../features/documents/data/document_chunk_repository.dart';
 import '../../../features/documents/data/document_repository.dart';
@@ -21,10 +22,12 @@ class DocumentsNotifier extends _$DocumentsNotifier {
 
   /// Open file picker, then run the ingestion pipeline.
   Future<void> pickAndIngest() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowMultiple: false,
-      allowedExtensions: ['pdf', 'docx', 'txt'],
+    final result = await whileKeepingAppAlive(
+      () => FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowMultiple: false,
+        allowedExtensions: ['pdf', 'docx', 'txt'],
+      ),
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
