@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loki_llm/core/providers/objectbox_provider.dart';
 import 'package:loki_llm/core/providers/shared_preferences_provider.dart';
+import 'package:loki_llm/core/router/app_router.dart';
 import 'package:loki_llm/core/theme/prism_relay.dart';
 import 'package:loki_llm/core/widgets/prism_dock.dart';
 import 'package:loki_llm/features/models/domain/model.dart';
@@ -59,6 +60,31 @@ void main() {
       expect(await dockHeight(2), atClamp);
       expect(tester.takeException(), isNull);
     });
+  });
+
+  testWidgets('Settings shows inline sliders and saves changes',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(overrides: [
+      objectBoxStoreProvider
+          .overrideWith((_) => throw UnimplementedError('No store in test')),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const MyApp()),
+    );
+    await tester.pumpAndSettle();
+    container.read(appRouterProvider).go('/settings');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Slider), findsNWidgets(3));
+    expect(find.text('300'), findsOneWidget);
+    tester.widget<Slider>(find.byType(Slider).first).onChanged!(350);
+    await tester.pumpAndSettle();
+    expect(find.text('350'), findsOneWidget);
+    expect(prefs.getInt('settings_chunk_size'), 350);
   });
 
   group('Model domain', () {
