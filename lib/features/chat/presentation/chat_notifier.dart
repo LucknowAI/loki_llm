@@ -16,6 +16,7 @@ import '../application/conversation_summarizer.dart';
 import '../application/prompt_builder.dart';
 import '../data/conversation_repository.dart';
 import '../data/message_repository.dart';
+import '../domain/conversation.dart';
 import '../domain/message.dart';
 import '../domain/message_role.dart';
 import '../../documents/data/document_chunk_repository.dart';
@@ -255,7 +256,7 @@ class ChatNotifier extends _$ChatNotifier {
       final conversation = convRepo.getById(conversationId);
       if (conversation != null) {
         final loadedId = loadedModel?.id ?? '';
-        final nextTitle = conversation.title == 'New conversation'
+        final nextTitle = isPlaceholderChatTitle(conversation.title)
             ? firstMessageTitle(userText)
             : conversation.title;
         final nextModelId =
@@ -672,7 +673,7 @@ class ChatNotifier extends _$ChatNotifier {
         ref.read(conversationRepositoryProvider).getById(conversationId);
 
     final settings = ref.read(settingsNotifierProvider);
-    final embService = ref.read(embeddingServiceProvider).valueOrNull;
+    final embService = ref.read(embeddingServiceProvider.future);
     final chunkRepo = ref.read(documentChunkRepositoryProvider);
     final loadedModel =
         ref.read(inferenceNotifierProvider.notifier).loadedModel;
@@ -683,12 +684,7 @@ class ChatNotifier extends _$ChatNotifier {
         messageRepo: ref.read(messageRepositoryProvider),
         documentRepo: ref.read(documentRepositoryProvider),
         chunkRepo: chunkRepo,
-        embedQuery: (q) async {
-          if (embService == null || !embService.isInitialized) {
-            throw StateError('embedding service unavailable');
-          }
-          return embService.embedQuery(q);
-        },
+        embedQuery: (q) async => (await embService).embedQuery(q),
         topK: settings.topK,
         chunkSize: settings.chunkSize,
         summary: summary,
@@ -869,13 +865,9 @@ class ChatNotifier extends _$ChatNotifier {
   ) async {
     if (!ragEnabled) return const [];
     final log = AppLogger.instance;
-    final embService = ref.read(embeddingServiceProvider).valueOrNull;
-    if (embService == null || !embService.isInitialized) {
-      log.debug(_logTag, 'RAG: embedding service unavailable, skipping');
-      return const [];
-    }
     try {
       log.debug(_logTag, 'RAG: embedding query');
+      final embService = await ref.read(embeddingServiceProvider.future);
       final queryVec = await embService.embedQuery(query);
       final topK = ref.read(settingsNotifierProvider).topK;
       final chunks = ref

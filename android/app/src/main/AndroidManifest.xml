@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Required for dio HTTP downloads (release builds) -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- PickerKeepAliveService: keeps a loaded model alive while a file picker is open -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <application
         android:label="Loki LLM"
         android:name="${applicationName}"
@@ -27,6 +29,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <service
+            android:name=".PickerKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="shortService"/>
         <!-- flutter_gemma: optional GPU acceleration via OpenCL -->
         <uses-native-library android:name="libOpenCL.so" android:required="false"/>
         <uses-native-library android:name="libOpenCL-car.so" android:required="false"/>
