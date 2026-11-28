@@ -60,6 +60,41 @@ void main() {
       expect(await dockHeight(2), atClamp);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('every pushed route renders at large text without errors',
+        (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 640);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(overrides: [
+        objectBoxStoreProvider
+            .overrideWith((_) => throw UnimplementedError('No store in test')),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ]);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MyApp()),
+      );
+      await tester.pumpAndSettle();
+      final router = container.read(appRouterProvider);
+      for (final (route, title) in [
+        ('/settings', 'Settings'),
+        ('/generation', 'Generation'),
+        ('/prompts', 'Prompts'),
+        ('/logs', 'Logs (live)'),
+        ('/model-io', 'Model I/O log'),
+        ('/invalid-route', 'Page unavailable'),
+      ]) {
+        router.go(route);
+        await tester.pumpAndSettle();
+        expect(find.text(title), findsWidgets, reason: route);
+        expect(tester.takeException(), isNull, reason: route);
+      }
+    });
   });
 
   testWidgets('Settings shows inline sliders and saves changes',
